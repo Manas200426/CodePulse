@@ -1,0 +1,11 @@
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Contracts\bin\Debug\net9.0\CodePulse.Contracts.deps.json
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Contracts\bin\Debug\net9.0\CodePulse.Contracts.dll
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Contracts\bin\Debug\net9.0\CodePulse.Contracts.pdb
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Contracts\obj\Debug\net9.0\CodePulse.Contracts.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Contracts\obj\Debug\net9.0\CodePulse.Contracts.AssemblyInfoInputs.cache
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Contracts\obj\Debug\net9.0\CodePulse.Contracts.AssemblyInfo.cs
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Contracts\obj\Debug\net9.0\CodePulse.Contracts.csproj.CoreCompileInputs.cache
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Contracts\obj\Debug\net9.0\CodePulse.Contracts.dll
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Contracts\obj\Debug\net9.0\refint\CodePulse.Contracts.dll
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Contracts\obj\Debug\net9.0\CodePulse.Contracts.pdb
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Contracts\obj\Debug\net9.0\ref\CodePulse.Contracts.dll

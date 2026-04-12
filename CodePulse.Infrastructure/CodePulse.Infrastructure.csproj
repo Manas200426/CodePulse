@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\CodePulse.Application\CodePulse.Application.csproj" />
+    <ProjectReference Include="..\CodePulse.Domain\CodePulse.Domain.csproj" />
+    <ProjectReference Include="..\CodePulse.Contracts\CodePulse.Contracts.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

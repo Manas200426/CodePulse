@@ -1,0 +1,11 @@
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Domain\bin\Debug\net9.0\CodePulse.Domain.deps.json
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Domain\bin\Debug\net9.0\CodePulse.Domain.dll
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Domain\bin\Debug\net9.0\CodePulse.Domain.pdb
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Domain\obj\Debug\net9.0\CodePulse.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Domain\obj\Debug\net9.0\CodePulse.Domain.AssemblyInfoInputs.cache
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Domain\obj\Debug\net9.0\CodePulse.Domain.AssemblyInfo.cs
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Domain\obj\Debug\net9.0\CodePulse.Domain.csproj.CoreCompileInputs.cache
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Domain\obj\Debug\net9.0\CodePulse.Domain.dll
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Domain\obj\Debug\net9.0\refint\CodePulse.Domain.dll
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Domain\obj\Debug\net9.0\CodePulse.Domain.pdb
+C:\Users\Manas\OneDrive\Desktop\CodePulse\CodePulse.Domain\obj\Debug\net9.0\ref\CodePulse.Domain.dll
