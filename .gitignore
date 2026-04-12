@@ -1,0 +1,37 @@
+## .NET / C# gitignore (clean version)
+
+# Build
+bin/
+obj/
+Debug/
+Release/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+
+# User files
+*.user
+*.suo
+*.userprefs
+
+# Logs
+*.log
+Logs/
+
+# NuGet
+*.nupkg
+packages/
+
+# Environment
+appsettings.Development.json
+appsettings.Local.json
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AI tools
+.claude/
