@@ -3,6 +3,7 @@ using System;
 using CodePulse.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CodePulse.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260412174319_AddHealthCheckResult")]
+    partial class AddHealthCheckResult
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -51,39 +54,6 @@ namespace CodePulse.Persistence.Migrations
                     b.HasIndex("ServiceId");
 
                     b.ToTable("HealthCheckResults");
-                });
-
-            modelBuilder.Entity("CodePulse.Domain.Entities.Incident", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("FailureCount")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("ResolvedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("ServiceId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("StartedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ServiceId");
-
-                    b.ToTable("Incidents");
                 });
 
             modelBuilder.Entity("CodePulse.Domain.Entities.MonitoredService", b =>
@@ -128,17 +98,6 @@ namespace CodePulse.Persistence.Migrations
                 });
 
             modelBuilder.Entity("CodePulse.Domain.Entities.HealthCheckResult", b =>
-                {
-                    b.HasOne("CodePulse.Domain.Entities.MonitoredService", "Service")
-                        .WithMany()
-                        .HasForeignKey("ServiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Service");
-                });
-
-            modelBuilder.Entity("CodePulse.Domain.Entities.Incident", b =>
                 {
                     b.HasOne("CodePulse.Domain.Entities.MonitoredService", "Service")
                         .WithMany()

@@ -4,6 +4,12 @@
     <ProjectReference Include="..\CodePulse.Application\CodePulse.Application.csproj" />
     <ProjectReference Include="..\CodePulse.Domain\CodePulse.Domain.csproj" />
     <ProjectReference Include="..\CodePulse.Contracts\CodePulse.Contracts.csproj" />
+    <ProjectReference Include="..\CodePulse.Persistence\CodePulse.Persistence.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -1,4 +1,5 @@
 using CodePulse.Application.Services;
+using CodePulse.Infrastructure.Monitoring;
 using CodePulse.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +15,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IMonitoredServiceService, MonitoredServiceService>();
+builder.Services.AddHostedService<HealthCheckWorker>();
 
 var app = builder.Build();
 
