@@ -12,6 +12,8 @@ public class AppDbContext : DbContext
     public DbSet<MonitoredService> MonitoredServices => Set<MonitoredService>();
     public DbSet<HealthCheckResult> HealthCheckResults => Set<HealthCheckResult>();
     public DbSet<Incident> Incidents => Set<Incident>();
+    public DbSet<Anomaly> Anomalies => Set<Anomaly>();
+    public DbSet<ServiceDependency> ServiceDependencies => Set<ServiceDependency>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -63,6 +65,29 @@ public class AppDbContext : DbContext
 
             entity.Property(x => x.Status).IsRequired();
             entity.Property(x => x.Reason).IsRequired();
+        });
+
+        modelBuilder.Entity<Anomaly>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.HasOne(x => x.Service)
+                .WithMany()
+                .HasForeignKey(x => x.ServiceId);
+
+            entity.Property(x => x.Type).IsRequired().HasMaxLength(50);
+            entity.Property(x => x.Status).IsRequired().HasMaxLength(20);
+            entity.Property(x => x.CurrentValue).IsRequired();
+            entity.Property(x => x.BaselineValue).IsRequired();
+            entity.Property(x => x.Deviation).IsRequired();
+        });
+        modelBuilder.Entity<ServiceDependency>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.HasOne(x => x.Service)
+                .WithMany()
+                .HasForeignKey(x => x.ServiceId);
         });
     }
 }

@@ -1,0 +1,295 @@
+{
+  "info": {
+    "name": "CodePulse.TestServices",
+    "description": "Simulation API for testing CodePulse observability platform.\n\nCovers:\n- Incident detection (fail, flaky)\n- Anomaly detection (slow, degrading)\n- Dependency correlation (auth → orders)\n\nBase URL: http://localhost:5001\n\n---\n\n## Quick Demo Scenarios\n\n**Scenario 1 — Trigger an Incident**\nRun `GET /fail` 3+ times. CodePulse background worker will detect 3 consecutive failures and create an Active incident.\n\n**Scenario 2 — Trigger a Latency Anomaly**\nRun `GET /degrading` repeatedly. Each call doubles the response time (100ms → 200ms → 400ms → 800ms...). Once latency is 2x above baseline, CodePulse creates an Anomaly record.\n\n**Scenario 3 — Trigger Incident Correlation**\nRegister both `/auth` and `/orders` in CodePulse with a ServiceDependency (orders depends on auth). When `/auth` fails (20% chance), `/orders` cascades. CodePulse links both incidents automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "codepulse-testservices-v1"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5001",
+      "type": "string",
+      "description": "Base URL for CodePulse.TestServices simulation API"
+    }
+  ],
+  "item": [
+    {
+      "name": "Basic Health",
+      "description": "Endpoints that represent a stable, healthy service. Used as a baseline to verify CodePulse does NOT create false positive incidents.",
+      "item": [
+        {
+          "name": "Healthy — Always 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/healthy",
+              "host": ["{{baseUrl}}"],
+              "path": ["healthy"]
+            },
+            "description": "## GET /healthy\n\n**Simulates:** A perfectly healthy API endpoint.\n\n**Behaviour:**\n- Always returns HTTP 200\n- Response time ~0ms (no artificial delay)\n\n**What CodePulse should detect:** Nothing. This endpoint should never trigger an incident, anomaly, or alert. Use it to verify your false-positive rate is zero.\n\n**Sample response:**\n```json\n{\n  \"status\": \"healthy\",\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}\n```"
+          },
+          "response": [
+            {
+              "name": "200 OK — Healthy",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"healthy\",\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Failure Scenarios",
+      "description": "Endpoints that simulate service failures. Used to trigger incident creation and resolution in CodePulse.\n\nKey rule: CodePulse creates an Active incident after 3 consecutive failures, and resolves it after 3 consecutive successes.",
+      "item": [
+        {
+          "name": "Fail — Always 500",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/fail",
+              "host": ["{{baseUrl}}"],
+              "path": ["fail"]
+            },
+            "description": "## GET /fail\n\n**Simulates:** A completely broken API — like a crashed service or a fatal unhandled exception.\n\n**Behaviour:**\n- Always returns HTTP 500\n- Response time ~0ms\n\n**What CodePulse should detect:**\n- After 3 consecutive calls → creates an **Active Incident**\n- Severity: High\n- Reason: \"Service failed 3 consecutive health checks\"\n\n**Demo steps:**\n1. Register this endpoint in CodePulse with a 30s check interval\n2. Wait for 3 background checks to complete\n3. Check `GET /incidents` in CodePulse — an Active incident should appear\n\n**Sample response:**\n```json\n{\n  \"error\": \"Simulated failure\",\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}\n```"
+          },
+          "response": [
+            {
+              "name": "500 Internal Server Error",
+              "status": "Internal Server Error",
+              "code": 500,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"error\": \"Simulated failure\",\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Flaky — 70% OK / 30% Fail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/flaky",
+              "host": ["{{baseUrl}}"],
+              "path": ["flaky"]
+            },
+            "description": "## GET /flaky\n\n**Simulates:** An unstable service with intermittent failures — like a service under memory pressure or a flaky database connection.\n\n**Behaviour:**\n- 70% of requests → HTTP 200\n- 30% of requests → HTTP 500\n- Non-deterministic (random per request)\n\n**What CodePulse should detect:**\n- If 3 consecutive checks all land on the 30% failure path → **Active Incident** created\n- If 3 consecutive checks all land on the 70% success path → incident **Resolved**\n- This tests your incident create/resolve lifecycle\n\n**Demo steps:**\n1. Run this request ~10 times\n2. Observe the mix of 200s and 500s\n3. Watch CodePulse incidents flip between Active and Resolved\n\n**Sample responses:**\n```json\n{ \"status\": \"ok\", \"timestamp\": \"...\" }         ← 200\n{ \"error\": \"Flaky failure\", \"timestamp\": \"...\" } ← 500\n```"
+          },
+          "response": [
+            {
+              "name": "200 OK (70% chance)",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"ok\",\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}"
+            },
+            {
+              "name": "500 Internal Server Error (30% chance)",
+              "status": "Internal Server Error",
+              "code": 500,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"error\": \"Flaky failure\",\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Latency & Anomaly",
+      "description": "Endpoints that simulate response time degradation. Used to trigger anomaly detection in CodePulse.\n\nCodePulse anomaly formula:\n  deviation = current_response_time / baseline_average\n  If deviation >= 2.0 → Anomaly created (type: LatencySpike)",
+      "item": [
+        {
+          "name": "Slow — Fixed Delay",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/slow?delay=2000",
+              "host": ["{{baseUrl}}"],
+              "path": ["slow"],
+              "query": [
+                {
+                  "key": "delay",
+                  "value": "2000",
+                  "description": "Delay in milliseconds before responding. Min: 0. Max: 30000."
+                }
+              ]
+            },
+            "description": "## GET /slow?delay=ms\n\n**Simulates:** A slow API — like a heavy database query, N+1 query problem, or an external API with high latency.\n\n**Behaviour:**\n- Waits exactly `delay` milliseconds (default: 2000ms)\n- Always returns HTTP 200 after the delay\n- Clamped between 0ms and 30,000ms for safety\n\n**What CodePulse should detect:**\n- If the response time is 2x above the rolling baseline → **Anomaly** created (type: LatencySpike)\n- Useful for manually forcing a one-time spike\n\n**Demo steps:**\n1. Register `/slow?delay=100` in CodePulse (builds a fast baseline)\n2. Change it to `/slow?delay=5000` — CodePulse detects the spike\n\n**Try different delays:**\n- `?delay=500`   — moderate\n- `?delay=3000`  — obvious spike\n- `?delay=10000` — severe degradation\n\n**Sample response:**\n```json\n{\n  \"status\": \"ok\",\n  \"requestedDelayMs\": 2000,\n  \"actualMs\": 2001,\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}\n```"
+          },
+          "response": [
+            {
+              "name": "200 OK (after delay)",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"ok\",\n  \"requestedDelayMs\": 2000,\n  \"actualMs\": 2001,\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Slow — 500ms Spike",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/slow?delay=500",
+              "host": ["{{baseUrl}}"],
+              "path": ["slow"],
+              "query": [
+                {
+                  "key": "delay",
+                  "value": "500",
+                  "description": "Light spike — 500ms"
+                }
+              ]
+            },
+            "description": "Quick 500ms delay variant. Useful for light latency testing."
+          },
+          "response": []
+        },
+        {
+          "name": "Slow — 8000ms Severe Spike",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/slow?delay=8000",
+              "host": ["{{baseUrl}}"],
+              "path": ["slow"],
+              "query": [
+                {
+                  "key": "delay",
+                  "value": "8000",
+                  "description": "Severe spike — 8 seconds"
+                }
+              ]
+            },
+            "description": "8 second delay — guaranteed to trigger anomaly detection if baseline is under 4 seconds."
+          },
+          "response": []
+        },
+        {
+          "name": "Degrading — Doubles Every Request",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/degrading",
+              "host": ["{{baseUrl}}"],
+              "path": ["degrading"]
+            },
+            "description": "## GET /degrading\n\n**Simulates:** Progressive service degradation — like a memory leak, growing queue depth, or connection pool exhaustion.\n\n**Behaviour:**\n- Maintains a server-side counter (resets on restart)\n- Each request doubles the delay:\n  - Request 1 → 100ms\n  - Request 2 → 200ms\n  - Request 3 → 400ms\n  - Request 4 → 800ms\n  - Request 5 → 1600ms\n  - Request 6 → 3200ms  ← anomaly fires here\n  - Capped at 15,000ms\n- Always returns HTTP 200\n\n**What CodePulse should detect:**\n- As requests accumulate, `deviation = current / baseline` grows\n- Once deviation >= 2.0 → **Anomaly** created (type: LatencySpike)\n- No incident created (service still returns 200)\n\n**Demo steps:**\n1. Register this endpoint in CodePulse\n2. Run this request 5-6 times manually OR wait for background checks\n3. By request 5-6, latency will be 10-20x the baseline\n4. Check `GET /anomalies` in CodePulse — a LatencySpike anomaly appears\n5. Reset counter with `POST /degrading/reset` to repeat the demo\n\n**Sample response:**\n```json\n{\n  \"status\": \"ok\",\n  \"requestNumber\": 4,\n  \"simulatedDelayMs\": 800,\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}\n```"
+          },
+          "response": [
+            {
+              "name": "200 OK — Request 1 (100ms)",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"ok\",\n  \"requestNumber\": 1,\n  \"simulatedDelayMs\": 100,\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}"
+            },
+            {
+              "name": "200 OK — Request 4 (800ms, anomaly threshold)",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"ok\",\n  \"requestNumber\": 4,\n  \"simulatedDelayMs\": 800,\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Degrading — Reset Counter",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/degrading/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["degrading", "reset"]
+            },
+            "description": "## POST /degrading/reset\n\n**Purpose:** Resets the degrading counter back to 0 so you can re-run the anomaly demo from scratch.\n\n**When to use:**\n- After completing an anomaly demo\n- Before starting a fresh test run\n- When the delay has capped at 15,000ms and you want to reset\n\n**Sample response:**\n```json\n{\n  \"message\": \"Counter reset to 0\",\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}\n```"
+          },
+          "response": [
+            {
+              "name": "200 OK — Reset successful",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"message\": \"Counter reset to 0\",\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Dependency & Correlation",
+      "description": "Endpoints that simulate upstream/downstream service dependencies.\n\nSetup in CodePulse:\n1. Register /auth as a service (upstream)\n2. Register /orders as a service (downstream)\n3. Add a ServiceDependency: orders depends on auth\n\nExpected result:\nWhen /auth starts failing → /orders fails too → CodePulse links both incidents and marks the orders incident as 'Likely caused by upstream service: auth'",
+      "item": [
+        {
+          "name": "Auth — Upstream Service (80% OK / 20% Fail)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth"]
+            },
+            "description": "## GET /auth\n\n**Simulates:** An authentication/identity service that is the upstream dependency for other services.\n\n**Behaviour:**\n- 80% of requests → HTTP 200 (authenticated)\n- 20% of requests → HTTP 500 (auth failure)\n- Non-deterministic (random per request)\n\n**Role in correlation:**\n- This is the ROOT CAUSE service\n- When this fails → /orders cascades and also fails\n- CodePulse should detect this as the upstream cause\n\n**What CodePulse should detect:**\n- If 3 consecutive checks fail → **Active Incident** on auth service\n- This incident should be picked up by correlation logic\n\n**Demo steps:**\n1. Hit this endpoint repeatedly — watch 200s and 500s in the console\n2. Register in CodePulse as 'Auth API' with health endpoint `/auth`\n3. When an auth incident is created, check if orders incident links to it\n\n**Sample responses:**\n```json\n{ \"status\": \"authenticated\", \"timestamp\": \"...\" }  ← 200\n{ \"error\": \"Auth service failure\", \"timestamp\": \"...\" } ← 500\n```"
+          },
+          "response": [
+            {
+              "name": "200 OK — Authenticated (80% chance)",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"authenticated\",\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}"
+            },
+            {
+              "name": "500 Internal Server Error — Auth failed (20% chance)",
+              "status": "Internal Server Error",
+              "code": 500,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"error\": \"Auth service failure\",\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Orders — Downstream Service (depends on Auth)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"]
+            },
+            "description": "## GET /orders\n\n**Simulates:** An orders/checkout service that depends on the auth service to validate requests.\n\n**Behaviour:**\n- Internally calls `GET /auth` on every request\n- If /auth returns 200 → /orders returns 200\n- If /auth returns 500 → /orders returns 500\n- Response time includes auth call latency\n\n**Role in correlation:**\n- This is the DOWNSTREAM / EFFECT service\n- Its failure is CAUSED BY auth failure\n- CodePulse should detect both incidents and link them\n\n**What CodePulse should detect:**\n- Active Incident on orders service (when auth fails consistently)\n- Correlation: orders incident reason updated to 'Likely caused by upstream service: [auth service ID]'\n\n**Demo steps (full correlation flow):**\n1. Register both /auth and /orders in CodePulse\n2. Add ServiceDependency: orders depends on auth\n3. Hit /orders repeatedly — sometimes it will fail due to /auth\n4. Wait for CodePulse background worker to run 3 checks on both\n5. Check GET /incidents — you should see TWO active incidents\n6. The orders incident reason should reference the auth service\n\n**Sample responses:**\n```json\n{\n  \"status\": \"ok\",\n  \"message\": \"Orders processed successfully\",\n  \"authVerified\": true,\n  \"timestamp\": \"...\"\n}  ← 200 (auth succeeded)\n\n{\n  \"error\": \"Orders failed: upstream Auth returned failure\",\n  \"authStatus\": 500,\n  \"timestamp\": \"...\"\n}  ← 500 (auth failed, orders cascades)\n```"
+          },
+          "response": [
+            {
+              "name": "200 OK — Orders processed (auth succeeded)",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"ok\",\n  \"message\": \"Orders processed successfully\",\n  \"authVerified\": true,\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}"
+            },
+            {
+              "name": "500 Internal Server Error — Auth cascade failure",
+              "status": "Internal Server Error",
+              "code": 500,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"error\": \"Orders failed: upstream Auth returned failure\",\n  \"authStatus\": 500,\n  \"timestamp\": \"2026-04-18T10:00:00Z\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 using CodePulse.Application.Services;
 using CodePulse.Infrastructure.Monitoring;
 using CodePulse.Persistence;
+using CodePulse.Persistence.Seed;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,6 +19,14 @@ builder.Services.AddScoped<IMonitoredServiceService, MonitoredServiceService>();
 builder.Services.AddHostedService<HealthCheckWorker>();
 
 var app = builder.Build();
+
+// ── Seed database on startup ───────────────────────────────────────────────────
+using (var scope = app.Services.CreateScope())
+{
+    var db     = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    await DataSeeder.SeedAsync(db, logger);
+}
 
 // Enable Swagger middleware
 if (app.Environment.IsDevelopment())

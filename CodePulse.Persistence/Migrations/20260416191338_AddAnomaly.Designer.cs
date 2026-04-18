@@ -3,6 +3,7 @@ using System;
 using CodePulse.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CodePulse.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260416191338_AddAnomaly")]
+    partial class AddAnomaly
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -165,25 +168,6 @@ namespace CodePulse.Persistence.Migrations
                     b.ToTable("MonitoredServices");
                 });
 
-            modelBuilder.Entity("CodePulse.Domain.Entities.ServiceDependency", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("DependsOnServiceId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ServiceId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ServiceId");
-
-                    b.ToTable("ServiceDependencies");
-                });
-
             modelBuilder.Entity("CodePulse.Domain.Entities.Anomaly", b =>
                 {
                     b.HasOne("CodePulse.Domain.Entities.MonitoredService", "Service")
@@ -207,17 +191,6 @@ namespace CodePulse.Persistence.Migrations
                 });
 
             modelBuilder.Entity("CodePulse.Domain.Entities.Incident", b =>
-                {
-                    b.HasOne("CodePulse.Domain.Entities.MonitoredService", "Service")
-                        .WithMany()
-                        .HasForeignKey("ServiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Service");
-                });
-
-            modelBuilder.Entity("CodePulse.Domain.Entities.ServiceDependency", b =>
                 {
                     b.HasOne("CodePulse.Domain.Entities.MonitoredService", "Service")
                         .WithMany()
