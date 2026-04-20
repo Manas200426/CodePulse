@@ -16,6 +16,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IMonitoredServiceService, MonitoredServiceService>();
+builder.Services.AddScoped<IIncidentService, IncidentService>();
+builder.Services.AddScoped<IAnomalyService, AnomalyService>();
 builder.Services.AddHostedService<HealthCheckWorker>();
 
 var app = builder.Build();

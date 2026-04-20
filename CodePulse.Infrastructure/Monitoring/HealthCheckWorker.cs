@@ -1,3 +1,6 @@
+using CodePulse.Application.Services;
+using CodePulse.Domain.Entities;
+using CodePulse.Domain.Enums;
 using CodePulse.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,7 +8,6 @@ using Microsoft.Extensions.Hosting;
 
 using MonitoredService = CodePulse.Domain.Entities.MonitoredService;
 using DomainHealthCheckResult = CodePulse.Domain.Entities.HealthCheckResult;
-using CodePulse.Domain.Entities;
 
 
 namespace CodePulse.Infrastructure.Monitoring;
@@ -26,7 +28,9 @@ public class HealthCheckWorker : BackgroundService
         while (!stoppingToken.IsCancellationRequested)
         {
             using var scope = _serviceProvider.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var db              = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var incidentService = scope.ServiceProvider.GetRequiredService<IIncidentService>();
+            var anomalyService  = scope.ServiceProvider.GetRequiredService<IAnomalyService>();
 
             var services = await db.MonitoredServices
                 .Where(x => x.IsActive)
@@ -34,39 +38,38 @@ public class HealthCheckWorker : BackgroundService
 
             foreach (var service in services)
             {
-                await CheckServiceAsync(service, db, stoppingToken);
+                await CheckServiceAsync(service, db, incidentService, anomalyService, stoppingToken);
             }
 
             await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
         }
     }
 
-    private async Task CheckServiceAsync(MonitoredService service, AppDbContext db, CancellationToken token)
+    private async Task CheckServiceAsync(MonitoredService service, AppDbContext db, IIncidentService incidentService, IAnomalyService anomalyService, CancellationToken token)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
-            var url = $"{service.BaseUrl}{service.HealthEndpoint}";
-
+            var url      = $"{service.BaseUrl}{service.HealthEndpoint}";
             var response = await _httpClient.GetAsync(url, token);
-
             stopwatch.Stop();
 
             var result = new DomainHealthCheckResult
             {
-                Id = Guid.NewGuid(),
-                ServiceId = service.Id,
-                StatusCode = (int)response.StatusCode,
+                Id             = Guid.NewGuid(),
+                ServiceId      = service.Id,
+                StatusCode     = (int)response.StatusCode,
                 ResponseTimeMs = stopwatch.ElapsedMilliseconds,
-                IsSuccess = response.IsSuccessStatusCode,
-                CheckedAtUtc = DateTime.UtcNow
+                IsSuccess      = response.IsSuccessStatusCode,
+                CheckedAtUtc   = DateTime.UtcNow
             };
 
             db.HealthCheckResults.Add(result);
             await db.SaveChangesAsync(token);
-            await DetectIncidentAsync(service.Id, db);
-            await DetectLatencyAnomalyAsync(service.Id, db);
+
+            await incidentService.DetectAsync(service.Id);
+            await anomalyService.DetectAsync(service.Id);
             await DetectCorrelationAsync(service.Id, db);
         }
         catch (Exception ex)
@@ -75,110 +78,26 @@ public class HealthCheckWorker : BackgroundService
 
             var result = new DomainHealthCheckResult
             {
-                Id = Guid.NewGuid(),
-                ServiceId = service.Id,
-                StatusCode = 0,
+                Id             = Guid.NewGuid(),
+                ServiceId      = service.Id,
+                StatusCode     = 0,
                 ResponseTimeMs = stopwatch.ElapsedMilliseconds,
-                IsSuccess = false,
-                ErrorMessage = ex.Message,
-                CheckedAtUtc = DateTime.UtcNow
+                IsSuccess      = false,
+                ErrorMessage   = ex.Message,
+                CheckedAtUtc   = DateTime.UtcNow
             };
 
             db.HealthCheckResults.Add(result);
             await db.SaveChangesAsync(token);
+
+            await incidentService.DetectAsync(service.Id);
+            await anomalyService.DetectAsync(service.Id);
         }
-    }
-    private async Task DetectIncidentAsync(Guid serviceId, AppDbContext db)
-    {
-        var lastChecks = await db.HealthCheckResults
-            .Where(x => x.ServiceId == serviceId)
-            .OrderByDescending(x => x.CheckedAtUtc)
-            .Take(3)
-            .ToListAsync();
-
-        if (lastChecks.Count < 3)
-            return;
-
-        var existingIncident = await db.Incidents
-            .FirstOrDefaultAsync(x => x.ServiceId == serviceId && x.Status == "Active");
-
-        var allFailed = lastChecks.All(x => !x.IsSuccess);
-        var allSuccess = lastChecks.All(x => x.IsSuccess);
-
-        // 🔴 CREATE INCIDENT
-        if (allFailed && existingIncident == null)
-        {
-            var incident = new Incident
-            {
-                Id = Guid.NewGuid(),
-                ServiceId = serviceId,
-                Status = "Active",
-                Reason = "Service failed 3 consecutive health checks",
-                FailureCount = 3,
-                StartedAtUtc = DateTime.UtcNow
-            };
-
-            db.Incidents.Add(incident);
-            await db.SaveChangesAsync();
-        }
-
-        // 🟢 RESOLVE INCIDENT
-        if (allSuccess && existingIncident != null)
-        {
-            existingIncident.Status = "Resolved";
-            existingIncident.ResolvedAtUtc = DateTime.UtcNow;
-
-            await db.SaveChangesAsync();
-        }
-    }
-
-    private async Task DetectLatencyAnomalyAsync(Guid serviceId, AppDbContext db)
-    {
-        var recentChecks = await db.HealthCheckResults
-            .Where(x => x.ServiceId == serviceId && x.IsSuccess)
-            .OrderByDescending(x => x.CheckedAtUtc)
-            .Take(20)
-            .ToListAsync();
-
-        if (recentChecks.Count < 10)
-            return;
-
-        var current = recentChecks.First().ResponseTimeMs;
-
-        var baseline = recentChecks.Skip(1).Average(x => x.ResponseTimeMs);
-
-        if (baseline == 0)
-            return;
-
-        var deviation = current / baseline;
-
-        if (deviation < 2.0)
-            return;
-
-        var existing = await db.Anomalies
-            .FirstOrDefaultAsync(x => x.ServiceId == serviceId && x.Status == "Active");
-
-        if (existing != null)
-            return;
-
-        var anomaly = new Anomaly
-        {
-            Id = Guid.NewGuid(),
-            ServiceId = serviceId,
-            Type = "LatencySpike",
-            CurrentValue = current,
-            BaselineValue = baseline,
-            Deviation = deviation,
-            DetectedAtUtc = DateTime.UtcNow
-        };
-
-        db.Anomalies.Add(anomaly);
-        await db.SaveChangesAsync();
     }
     private async Task DetectCorrelationAsync(Guid serviceId, AppDbContext db)
     {
         var currentIncident = await db.Incidents
-            .FirstOrDefaultAsync(x => x.ServiceId == serviceId && x.Status == "Active");
+            .FirstOrDefaultAsync(x => x.ServiceId == serviceId && x.Status == IncidentStatus.Active);
 
         if (currentIncident == null)
             return;
@@ -187,20 +106,31 @@ public class HealthCheckWorker : BackgroundService
             .Where(x => x.ServiceId == serviceId)
             .ToListAsync();
 
+        if (!dependencies.Any())
+            return;
+
         foreach (var dep in dependencies)
         {
             var upstreamIncident = await db.Incidents
-                .Where(x => x.ServiceId == dep.DependsOnServiceId && x.Status == "Active")
+                .Where(x => x.ServiceId == dep.DependsOnServiceId && x.Status == IncidentStatus.Active)
                 .OrderBy(x => x.StartedAtUtc)
                 .FirstOrDefaultAsync();
 
             if (upstreamIncident == null)
                 continue;
 
-            // check time difference
-            if (upstreamIncident.StartedAtUtc < currentIncident.StartedAtUtc)
+            // 🧠 TIME WINDOW CHECK (important)
+            var timeDiff = (currentIncident.StartedAtUtc - upstreamIncident.StartedAtUtc).TotalMinutes;
+
+            if (timeDiff < 0 || timeDiff > 5)
+                continue;
+
+            // 🧠 UPDATE ONLY IF NOT ALREADY CORRELATED
+            if (!currentIncident.Reason.Contains("upstream"))
             {
-                currentIncident.Reason = $"Likely caused by upstream service {dep.DependsOnServiceId}";
+                currentIncident.Reason =
+                    $"Likely caused by upstream service {dep.DependsOnServiceId} (within {timeDiff:F1} min window)";
+
                 await db.SaveChangesAsync();
             }
         }

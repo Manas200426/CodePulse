@@ -63,7 +63,12 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.ServiceId);
 
-            entity.Property(x => x.Status).IsRequired();
+            entity.Property(x => x.Status)
+                .HasConversion<string>()   // store as string in DB
+                .IsRequired();
+            entity.Property(x => x.Severity)
+                .HasConversion<string>()
+                .IsRequired();
             entity.Property(x => x.Reason).IsRequired();
         });
 
@@ -75,8 +80,16 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.ServiceId);
 
-            entity.Property(x => x.Type).IsRequired().HasMaxLength(50);
-            entity.Property(x => x.Status).IsRequired().HasMaxLength(20);
+            entity.Property(x => x.Type)
+                .HasConversion<string>()
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(x => x.Status)
+                .HasConversion<string>()
+                .IsRequired()
+                .HasMaxLength(20);
+
             entity.Property(x => x.CurrentValue).IsRequired();
             entity.Property(x => x.BaselineValue).IsRequired();
             entity.Property(x => x.Deviation).IsRequired();

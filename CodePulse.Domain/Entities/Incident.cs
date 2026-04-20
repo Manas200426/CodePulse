@@ -1,5 +1,5 @@
 namespace CodePulse.Domain.Entities;
-
+using CodePulse.Domain.Enums;
 public class Incident
 {
     public Guid Id { get; set; }
@@ -8,11 +8,12 @@ public class Incident
 
     public MonitoredService Service { get; set; } = null!;
 
-    public string Status { get; set; } = "Active"; // Active / Resolved
+    public IncidentStatus Status { get; set; } = IncidentStatus.Active;
 
     public string Reason { get; set; } = string.Empty;
 
     public int FailureCount { get; set; }
+    public IncidentSeverity Severity { get; set; } = IncidentSeverity.Medium;
 
     public DateTime StartedAtUtc { get; set; } = DateTime.UtcNow;
 
