@@ -14,4 +14,10 @@ public interface IMonitoredServiceService
     Task<bool> UpdateAsync(Guid id, UpdateMonitoredServiceRequest request);
 
     Task<bool> DeleteAsync(Guid id);
+
+    /// <summary>Trigger an immediate health check for the given service, save the result, run all detectors.</summary>
+    Task<HealthCheckResultResponse?> RunCheckAsync(Guid id);
+
+    /// <summary>Returns aggregated metrics (uptime %, latency percentiles, error rate, etc.).</summary>
+    Task<MetricsResponse?> GetMetricsAsync(Guid id);
 }

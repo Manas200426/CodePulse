@@ -61,4 +61,30 @@ public class MonitoredServicesController : ControllerBase
 
         return NoContent();
     }
+
+    // POST /api/monitoredservices/{id}/run-check
+    // Triggers an immediate health check — useful for testing and the dashboard
+    [HttpPost("{id}/run-check")]
+    public async Task<IActionResult> RunCheck(Guid id)
+    {
+        var result = await _service.RunCheckAsync(id);
+
+        if (result is null)
+            return NotFound();
+
+        return Ok(result);
+    }
+
+    // GET /api/monitoredservices/{id}/metrics
+    // Returns aggregated stats: uptime %, average/p95/p99 latency, error rate
+    [HttpGet("{id}/metrics")]
+    public async Task<IActionResult> GetMetrics(Guid id)
+    {
+        var metrics = await _service.GetMetricsAsync(id);
+
+        if (metrics is null)
+            return NotFound();
+
+        return Ok(metrics);
+    }
 }
