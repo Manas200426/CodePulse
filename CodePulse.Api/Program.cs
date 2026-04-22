@@ -18,6 +18,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IMonitoredServiceService, MonitoredServiceService>();
 builder.Services.AddScoped<IIncidentService, IncidentService>();
 builder.Services.AddScoped<IAnomalyService, AnomalyService>();
+builder.Services.AddScoped<ICorrelationService, CorrelationService>();
 builder.Services.AddHostedService<HealthCheckWorker>();
 
 var app = builder.Build();

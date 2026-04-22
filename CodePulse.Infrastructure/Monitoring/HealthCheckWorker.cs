@@ -29,8 +29,9 @@ public class HealthCheckWorker : BackgroundService
         {
             using var scope = _serviceProvider.CreateScope();
             var db              = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var incidentService = scope.ServiceProvider.GetRequiredService<IIncidentService>();
-            var anomalyService  = scope.ServiceProvider.GetRequiredService<IAnomalyService>();
+            var incidentService    = scope.ServiceProvider.GetRequiredService<IIncidentService>();
+            var anomalyService     = scope.ServiceProvider.GetRequiredService<IAnomalyService>();
+            var correlationService = scope.ServiceProvider.GetRequiredService<ICorrelationService>();
 
             var services = await db.MonitoredServices
                 .Where(x => x.IsActive)
@@ -38,14 +39,14 @@ public class HealthCheckWorker : BackgroundService
 
             foreach (var service in services)
             {
-                await CheckServiceAsync(service, db, incidentService, anomalyService, stoppingToken);
+                await CheckServiceAsync(service, db, incidentService, anomalyService, correlationService, stoppingToken);
             }
 
             await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
         }
     }
 
-    private async Task CheckServiceAsync(MonitoredService service, AppDbContext db, IIncidentService incidentService, IAnomalyService anomalyService, CancellationToken token)
+    private async Task CheckServiceAsync(MonitoredService service, AppDbContext db, IIncidentService incidentService, IAnomalyService anomalyService, ICorrelationService correlationService, CancellationToken token)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -70,7 +71,7 @@ public class HealthCheckWorker : BackgroundService
 
             await incidentService.DetectAsync(service.Id);
             await anomalyService.DetectAsync(service.Id);
-            await DetectCorrelationAsync(service.Id, db);
+            await correlationService.DetectAsync(service.Id);
         }
         catch (Exception ex)
         {
@@ -92,47 +93,7 @@ public class HealthCheckWorker : BackgroundService
 
             await incidentService.DetectAsync(service.Id);
             await anomalyService.DetectAsync(service.Id);
-        }
-    }
-    private async Task DetectCorrelationAsync(Guid serviceId, AppDbContext db)
-    {
-        var currentIncident = await db.Incidents
-            .FirstOrDefaultAsync(x => x.ServiceId == serviceId && x.Status == IncidentStatus.Active);
-
-        if (currentIncident == null)
-            return;
-
-        var dependencies = await db.ServiceDependencies
-            .Where(x => x.ServiceId == serviceId)
-            .ToListAsync();
-
-        if (!dependencies.Any())
-            return;
-
-        foreach (var dep in dependencies)
-        {
-            var upstreamIncident = await db.Incidents
-                .Where(x => x.ServiceId == dep.DependsOnServiceId && x.Status == IncidentStatus.Active)
-                .OrderBy(x => x.StartedAtUtc)
-                .FirstOrDefaultAsync();
-
-            if (upstreamIncident == null)
-                continue;
-
-            // 🧠 TIME WINDOW CHECK (important)
-            var timeDiff = (currentIncident.StartedAtUtc - upstreamIncident.StartedAtUtc).TotalMinutes;
-
-            if (timeDiff < 0 || timeDiff > 5)
-                continue;
-
-            // 🧠 UPDATE ONLY IF NOT ALREADY CORRELATED
-            if (!currentIncident.Reason.Contains("upstream"))
-            {
-                currentIncident.Reason =
-                    $"Likely caused by upstream service {dep.DependsOnServiceId} (within {timeDiff:F1} min window)";
-
-                await db.SaveChangesAsync();
-            }
+            await correlationService.DetectAsync(service.Id);
         }
     }
 }

@@ -7,11 +7,13 @@ namespace CodePulse.Api.Controllers;
 [Route("api/incidents")]
 public class IncidentsController : ControllerBase
 {
-    private readonly IIncidentService _incidentService;
+    private readonly IIncidentService    _incidentService;
+    private readonly ICorrelationService _correlationService;
 
-    public IncidentsController(IIncidentService incidentService)
+    public IncidentsController(IIncidentService incidentService, ICorrelationService correlationService)
     {
-        _incidentService = incidentService;
+        _incidentService    = incidentService;
+        _correlationService = correlationService;
     }
 
     // GET /api/incidents
@@ -32,5 +34,18 @@ public class IncidentsController : ControllerBase
             return NotFound();
 
         return Ok(incident);
+    }
+
+    // GET /api/incidents/{id}/correlations
+    [HttpGet("{id}/correlations")]
+    public async Task<IActionResult> GetCorrelations(Guid id)
+    {
+        var incident = await _incidentService.GetByIdAsync(id);
+
+        if (incident is null)
+            return NotFound();
+
+        var correlations = await _correlationService.GetForIncidentAsync(id);
+        return Ok(correlations);
     }
 }

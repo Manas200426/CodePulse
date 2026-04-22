@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<Incident> Incidents => Set<Incident>();
     public DbSet<Anomaly> Anomalies => Set<Anomaly>();
     public DbSet<ServiceDependency> ServiceDependencies => Set<ServiceDependency>();
+    public DbSet<IncidentCorrelation> IncidentCorrelations => Set<IncidentCorrelation>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -101,6 +102,29 @@ public class AppDbContext : DbContext
             entity.HasOne(x => x.Service)
                 .WithMany()
                 .HasForeignKey(x => x.ServiceId);
+        });
+
+        modelBuilder.Entity<IncidentCorrelation>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            // Two FK references to the same Incidents table — must name them explicitly
+            entity.HasOne(x => x.DownstreamIncident)
+                .WithMany()
+                .HasForeignKey(x => x.DownstreamIncidentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.UpstreamIncident)
+                .WithMany()
+                .HasForeignKey(x => x.UpstreamIncidentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.Property(x => x.ConfidenceScore).IsRequired();
+            entity.Property(x => x.TimeDifferenceMinutes).IsRequired();
+
+            // Prevent the worker from creating duplicate rows for the same pair
+            entity.HasIndex(x => new { x.DownstreamIncidentId, x.UpstreamIncidentId })
+                  .IsUnique();
         });
     }
 }
